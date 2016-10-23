@@ -365,6 +365,7 @@ void nfa_ce_t3t_generate_rand_nfcid (UINT8 nfcid2[NCI_RF_F_UID_LEN])
 tNFA_STATUS nfa_ce_start_listening (void)
 {
     tNFA_DM_DISC_TECH_PROTO_MASK listen_mask;
+    tNFA_DM_DISC_PARAMS listen_parameters;
     tNFA_CE_CB    *p_cb = &nfa_ce_cb;
     tNFA_HANDLE   disc_handle;
     UINT8         listen_info_idx;
