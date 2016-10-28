@@ -501,7 +501,7 @@ tNFA_STATUS NFA_CeSetIsoDepListenTech (tNFA_TECHNOLOGY_MASK tech_mask)
             nfaStat = NFA_CeSetIsoDepListenNfcAParams(buffer, fileLen, 0x0004, TRUE, 0x08, TRUE, (UINT8 *)NULL, 0);
             
             if (nfaStat != NFA_STATUS_OK)
-                NFA_TRACE_API1 ("NFA_CeSetIsoDepListenTech (): UID set from /sdcard/uid.bin");        
+                NFA_TRACE_API0 ("NFA_CeSetIsoDepListenTech (): UID set from /sdcard/uid.bin");        
 	        
             free(buffer);
         }
