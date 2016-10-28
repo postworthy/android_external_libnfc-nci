@@ -376,56 +376,6 @@ tNFA_STATUS NFA_CeDeregisterAidOnDH (tNFA_HANDLE handle)
 }
 
 /*******************************************************************************
-**
-** Function         NFA_CeSetIsoDepListenTech
-**
-** Description      Set the technologies (NFC-A and/or NFC-B) to listen for when
-**                  NFA_CeConfigureLocalTag or NFA_CeDeregisterAidOnDH are called.
-**
-**                  By default (if this API is not called), NFA will listen
-**                  for both NFC-A and NFC-B for ISODEP.
-**
-** Note:            If listening for ISODEP on UICC, the DH listen callbacks
-**                  may still get activate notifications for ISODEP if the reader/
-**                  writer selects an AID that is not routed to the UICC (regardless
-**                  of whether A or B was disabled using NFA_CeSetIsoDepListenTech)
-**
-** Note:            If RF discovery is started, NFA_StopRfDiscovery()/NFA_RF_DISCOVERY_STOPPED_EVT
-**                  should happen before calling this function
-**
-** Returns:
-**                  NFA_STATUS_OK, if command accepted
-**                  NFA_STATUS_FAILED: otherwise
-**
-*******************************************************************************/
-tNFA_STATUS NFA_CeSetIsoDepListenTech (tNFA_TECHNOLOGY_MASK tech_mask)
-{
-    tNFA_CE_MSG *p_msg;
-    tNFA_TECHNOLOGY_MASK    use_mask = (NFA_TECHNOLOGY_MASK_A | NFA_TECHNOLOGY_MASK_B);
-
-    NFA_TRACE_API1 ("NFA_CeSetIsoDepListenTech (): 0x%x", tech_mask);
-    if (((tech_mask & use_mask) == 0) ||
-        ((tech_mask & ~use_mask) != 0) )
-    {
-        NFA_TRACE_ERROR0 ("NFA_CeSetIsoDepListenTech: Invalid technology mask");
-        return (NFA_STATUS_INVALID_PARAM);
-    }
-
-    if ((p_msg = (tNFA_CE_MSG *) GKI_getbuf ((UINT16) sizeof(tNFA_CE_MSG))) != NULL)
-    {
-        p_msg->hdr.event            = NFA_CE_API_CFG_ISODEP_TECH_EVT;
-        p_msg->hdr.layer_specific   = tech_mask;
-
-        nfa_sys_sendmsg (p_msg);
-
-        return (NFA_STATUS_OK);
-    }
-
-    return (NFA_STATUS_FAILED);
-}
-
-
-/*******************************************************************************
  **
  ** Function         NFA_CeSetIsoDepListenNfcAParams
  **
@@ -473,6 +423,103 @@ tNFA_STATUS NFA_CeSetIsoDepListenNfcAParams (UINT8 *p_nfcid1, UINT8 nfcid1_len, 
 
         if (hist_bytes_len)
             memcpy (p_msg->nfca_params.hist_bytes, p_hist_bytes, hist_bytes_len);
+
+        nfa_sys_sendmsg (p_msg);
+
+        return (NFA_STATUS_OK);
+    }
+
+    return (NFA_STATUS_FAILED);
+}
+
+/*******************************************************************************
+**
+** Function         NFA_CeSetIsoDepListenTech
+**
+** Description      Set the technologies (NFC-A and/or NFC-B) to listen for when
+**                  NFA_CeConfigureLocalTag or NFA_CeDeregisterAidOnDH are called.
+**
+**                  By default (if this API is not called), NFA will listen
+**                  for both NFC-A and NFC-B for ISODEP.
+**
+** Note:            If listening for ISODEP on UICC, the DH listen callbacks
+**                  may still get activate notifications for ISODEP if the reader/
+**                  writer selects an AID that is not routed to the UICC (regardless
+**                  of whether A or B was disabled using NFA_CeSetIsoDepListenTech)
+**
+** Note:            If RF discovery is started, NFA_StopRfDiscovery()/NFA_RF_DISCOVERY_STOPPED_EVT
+**                  should happen before calling this function
+**
+** Returns:
+**                  NFA_STATUS_OK, if command accepted
+**                  NFA_STATUS_FAILED: otherwise
+**
+*******************************************************************************/
+#define MAX_UID_FILE_LEN         0x0A
+tNFA_STATUS NFA_CeSetIsoDepListenTech (tNFA_TECHNOLOGY_MASK tech_mask)
+{
+    tNFA_CE_MSG *p_msg;
+    tNFA_TECHNOLOGY_MASK    use_mask = (NFA_TECHNOLOGY_MASK_A | NFA_TECHNOLOGY_MASK_B);
+    
+    //CUSTOM UID CODE
+    FILE *file;
+	char *buffer;
+	unsigned long fileLen;
+
+	//Open file
+	file = fopen("/sdcard/uid.bin", "rb");
+	if (!file)
+	{
+        NFA_TRACE_ERROR0 ("Unable to open file /sdcard/uid.bin");
+	}
+	else
+    {
+	    //Get file length
+	    fseek(file, 0, SEEK_END);
+	    fileLen=ftell(file);
+	    fseek(file, 0, SEEK_SET);
+
+	    //Allocate memory
+	    buffer=(char *)malloc(fileLen+1);
+	    if (!buffer)
+	    {
+		    NFA_TRACE_ERROR0 ("Memory Error");
+            fclose(file);    
+        }
+        else
+        {
+	        //Read file contents into buffer
+	        fread(buffer, fileLen, 1, file);
+	        fclose(file);
+
+            tNFA_STATUS nfaStat;
+            
+            //Safety Check...
+            if(fileLen > MAX_UID_FILE_LEN)
+                fileLen = MAX_UID_FILE_LEN;
+            
+            nfaStat = NFA_CeSetIsoDepListenNfcAParams(buffer, fileLen, 0x0004, TRUE, 0x08, TRUE, (UINT8 *)NULL, 0);
+            
+            if (nfaStat != NFA_STATUS_OK)
+                NFA_TRACE_API1 ("NFA_CeSetIsoDepListenTech (): UID set from /sdcard/uid.bin");        
+	        
+            free(buffer);
+        }
+    }
+    //END CUSTOM UID CODE
+    
+    NFA_TRACE_API1 ("NFA_CeSetIsoDepListenTech (): 0x%x", tech_mask);
+    if (((tech_mask & use_mask) == 0) ||
+        ((tech_mask & ~use_mask) != 0) )
+    {
+        NFA_TRACE_ERROR0 ("NFA_CeSetIsoDepListenTech: Invalid technology mask");
+        return (NFA_STATUS_INVALID_PARAM);
+    }
+
+    if ((p_msg = (tNFA_CE_MSG *) GKI_getbuf ((UINT16) sizeof(tNFA_CE_MSG))) != NULL)
+    {
+        p_msg->hdr.event            = NFA_CE_API_CFG_ISODEP_TECH_EVT;
+        p_msg->hdr.layer_specific   = tech_mask;
 
         nfa_sys_sendmsg (p_msg);
 
