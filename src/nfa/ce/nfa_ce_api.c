@@ -455,58 +455,10 @@ tNFA_STATUS NFA_CeSetIsoDepListenNfcAParams (UINT8 *p_nfcid1, UINT8 nfcid1_len, 
 **                  NFA_STATUS_FAILED: otherwise
 **
 *******************************************************************************/
-#define MAX_UID_FILE_LEN         0x0A
 tNFA_STATUS NFA_CeSetIsoDepListenTech (tNFA_TECHNOLOGY_MASK tech_mask)
 {
     tNFA_CE_MSG *p_msg;
     tNFA_TECHNOLOGY_MASK    use_mask = (NFA_TECHNOLOGY_MASK_A | NFA_TECHNOLOGY_MASK_B);
-    
-    //CUSTOM UID CODE
-    FILE *file;
-	char *buffer;
-	unsigned long fileLen;
-
-	//Open file
-	file = fopen("/sdcard/uid.bin", "rb");
-	if (!file)
-	{
-        NFA_TRACE_ERROR0 ("Unable to open file /sdcard/uid.bin");
-	}
-	else
-    {
-	    //Get file length
-	    fseek(file, 0, SEEK_END);
-	    fileLen=ftell(file);
-	    fseek(file, 0, SEEK_SET);
-
-	    //Allocate memory
-	    buffer=(char *)malloc(fileLen+1);
-	    if (!buffer)
-	    {
-		    NFA_TRACE_ERROR0 ("Memory Error");
-            fclose(file);    
-        }
-        else
-        {
-	        //Read file contents into buffer
-	        fread(buffer, fileLen, 1, file);
-	        fclose(file);
-
-            tNFA_STATUS nfaStat;
-            
-            //Safety Check...
-            if(fileLen > MAX_UID_FILE_LEN)
-                fileLen = MAX_UID_FILE_LEN;
-            
-            nfaStat = NFA_CeSetIsoDepListenNfcAParams(buffer, fileLen, 0x0004, TRUE, 0x08, TRUE, (UINT8 *)NULL, 0);
-            
-            if (nfaStat != NFA_STATUS_OK)
-                NFA_TRACE_API0 ("NFA_CeSetIsoDepListenTech (): UID set from /sdcard/uid.bin");        
-	        
-            free(buffer);
-        }
-    }
-    //END CUSTOM UID CODE
     
     NFA_TRACE_API1 ("NFA_CeSetIsoDepListenTech (): 0x%x", tech_mask);
     if (((tech_mask & use_mask) == 0) ||
